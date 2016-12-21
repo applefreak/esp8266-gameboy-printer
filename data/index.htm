@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>ESP8266 GameBoy Printer</title>
+	<script src="js/processing.min.js"></script>
+	<script src="js/jquery.min.js"></script>
+	<script src="js/jdataview.js"></script>
+	<script src="js/jbinary.js"></script>
+	<link rel="stylesheet" href="style.css" media="screen" title="no title" charset="utf-8">
+</head>
+<body>
+
+	<script type="application/processing" data-processing-target="pjs">
+		void setup() {
+			size(800, 720);
+			background(255);
+
+			color white = color(255, 255, 255);
+			color lgrey = color(128, 128, 128);
+			color dgrey = color(200, 200, 200);
+			color black = color(0, 0, 0);
+
+			var extract2BitsFromByte = function(byte) {
+				var result = [];
+				result[0] = byte.substring(0,2);
+				result[1] = byte.substring(2,4);
+				result[2] = byte.substring(4,6);
+				result[3] = byte.substring(6);
+				return result;
+			}
+
+			var drawLine = function(bytes, x_offset, y_offset) {
+				bytes[0] = binary(bytes[0], 8);
+				bytes[1] = binary(bytes[1], 8);
+
+				for (var i = 0; i < bytes[0].length; i++) {
+					switch(bytes[0][i] + bytes[1][i]) {
+						case '00':
+						stroke(white);
+						break;
+						case '01':
+						stroke(lgrey);
+						break;
+						case '10':
+						stroke(dgrey);
+						break;
+						case '11':
+						stroke(black);
+						break;
+						default:
+						console.log('Shall not be here');
+						break;
+					}
+					point(i + x_offset, y_offset);
+				}
+			}
+
+			// bytes is 16 bytes array
+			var drawTile = function(bytes, x_offset, y_offset) {
+				if(bytes.length != 16) return false;
+				for (var y = 0; y < 16; y++) {
+					drawLine(bytes.slice(y*2, y*2+2), x_offset, y + y_offset);
+				}
+			}
+
+			var img_data;
+			var typeSet = {
+				magic: ['array', 'uint8']
+			};
+
+			var drawImage = function(name) {
+				jBinary.load(name, typeSet, function (err, binary_dat) {
+					if (err) {
+						alert('Image file not found!');
+					} else {
+						img_data = binary_dat.read('magic');
+						scale(5);
+						var temp_y = 0;
+						for (int band_y = 0; band_y < 144; band_y+=8) {
+							var temp_x = 0;
+							for (int band_x = 0; band_x < 160; band_x += 8) {
+								var s_start = (20*temp_y+temp_x)*16;
+								drawTile(img_data.slice(s_start, s_start+16), band_x, band_y);
+								temp_x++;
+							}
+							temp_y++;
+						}
+						scale(0.2);
+					}
+				});
+			}
+			$('body').on('change', '#img_list', function() {
+				if ($('#img_list').val() != 0) {
+					drawImage($('#img_list').val());
+				}
+			});
+		}
+	</script>
+	<h1>ESP8266 Gameboy Printer</h1>
+	<p>Get the latest photo printed!</p>
+	<select id="img_list">
+		<option value="0">--Select One--</option>
+	</select>
+	<br>
+	<canvas id="pjs"></canvas>
+	<br>
+	<button id="dl">Download This Picture</button>
+	<br>
+	<button id="rm">Remove All Pictures</button>
+	<script>
+		$('#dl').click(function() {
+			var canvas = document.getElementById('pjs');
+			window.location = canvas.toDataURL("image/png");
+		});
+
+		$('#rm').click(function() {
+			if(window.confirm('Are you sure?')) {
+				$.get('remove_all', function(data) {
+					if (data) {
+						alert('Success!');
+					} else {
+						alert('Failed...')
+					}
+				});
+			}
+		});
+
+		$.get('list_img', function(data) {
+			$.each(data, function(i, v) {
+				$('#img_list').append('<option value="' + v.name + '">Picture '+i+'</option>');
+			});
+		});
+	</script>
+
+</body>
+</html>
