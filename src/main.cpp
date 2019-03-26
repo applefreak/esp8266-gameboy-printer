@@ -17,11 +17,10 @@ uint8_t current_data = 0x00;
 uint32_t packet_count = 0x00;
 uint32_t packet_legth = 0x00;
 uint8_t current_packet_type = 0x00;
-uint32_t data_length = 0x00;
 bool printed = false;
 uint8_t inquiry_count = 0x00;
 
-uint8_t image_data[5760] = {};
+uint8_t image_data[11520] = {};
 uint32_t img_index = 0;
 ESP8266WebServer server(80);
 
@@ -100,7 +99,7 @@ void processData(uint8_t data) {
 
 void storeData(uint8_t *image_data) {
   detachInterrupt(14);
-  Serial.println("Storing...");
+  // Serial.println("Storing...");
 
   uint32_t img_count = getImageCount();
   img_count++;
@@ -111,22 +110,21 @@ void storeData(uint8_t *image_data) {
     Serial.println("file creation failed");
   }
 
-  f.write(image_data, 5760);
+  f.write(image_data, img_index);
 
   f.close();
 
-  Serial.println("Image saved! Attaching Interrupt...");
+  // Serial.println("Image saved! Attaching Interrupt...");
   clock_count = 0x00;
   current_data = 0x00;
   packet_count = 0x00;
   packet_legth = 0x00;
   current_packet_type = 0x00;
-  data_length = 0x00;
   printed = false;
   inquiry_count = 0x00;
   img_index = 0x00;
   attachInterrupt(14, gbClockHit, RISING);
-  Serial.println("Interrupt attached!");
+  // Serial.println("Interrupt attached!");
 }
 
 String getContentType(String filename){
@@ -206,7 +204,6 @@ void resetAllCounters() {
   packet_count = 0x00;
   packet_legth = 0x00;
   current_packet_type = 0x00;
-  data_length = 0x00;
   printed = false;
   inquiry_count = 0x00;
   img_index = 0x00;
