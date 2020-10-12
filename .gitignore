@@ -1,4 +1,8 @@
+.DS_store
 .pioenvs
 .clang_complete
 .gcc-flags.json
 .piolibdeps
+.pio
+data/
+!data/readme
