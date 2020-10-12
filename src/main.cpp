@@ -24,6 +24,9 @@ uint8_t image_data[11520] = {};
 uint32_t img_index = 0;
 ESP8266WebServer server(80);
 
+void ICACHE_RAM_ATTR gbClockHit();
+void ICACHE_RAM_ATTR resetAllCounters();
+
 void gbClockHit() {
   if (digitalRead(MOSI) == HIGH) {
     current_data |= 0x01;
@@ -141,12 +144,13 @@ String getContentType(String filename){
   else if(filename.endsWith(".pdf")) return "application/x-pdf";
   else if(filename.endsWith(".zip")) return "application/x-zip";
   else if(filename.endsWith(".gz")) return "application/x-gzip";
+  else if(filename.endsWith(".json")) return "application/json";
   return "text/plain";
 }
 
 bool handleFileRead(String path){
   Serial.println("handleFileRead: " + path);
-  if(path.endsWith("/")) path += "index.htm";
+  if(path.endsWith("/")) path += "index.html";
   String contentType = getContentType(path);
   String pathWithGz = path + ".gz";
   if(SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)){
@@ -177,7 +181,7 @@ void handleImgList() {
   }
 
   output += "]";
-  server.send(200, "text/json", output);
+  server.send(200, "application/json", output);
 }
 
 uint32_t getImageCount() {
@@ -194,7 +198,7 @@ void removeAllImages() {
   while(dir.next()){
     SPIFFS.remove(dir.fileName());
   }
-  server.send(200, "text/json", "true");
+  server.send(200, "application/json", "true");
 }
 
 void resetAllCounters() {
@@ -225,12 +229,14 @@ void setup() {
   pinMode(MISO, OUTPUT);
   pinMode(MOSI, INPUT);
   pinMode(SCLK, INPUT);
+  Serial.println("Ports setup done");
 
   // Setup Clock Interrupt
   attachInterrupt(14, gbClockHit, RISING);
   attachInterrupt(5, resetAllCounters, FALLING);
   Serial.println("End Setup!");
   Serial.println();
+  Serial.println("interrupt setup done");
 
   Serial.println("Setting up Soft AP...");
   bool res = WiFi.softAP("GameboyPrinter");
